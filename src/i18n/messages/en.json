@@ -914,6 +914,26 @@
         "when": "Use when long sessions must survive account rotation without losing the working context.",
         "avoid": "Avoid when account switching is rare or when you do not want extra summarization requests.",
         "example": "Example: Codex sessions that rotate across multiple accounts near quota exhaustion."
+      },
+      "fill-first": {
+        "when": "Use when you want to fully exhaust one provider's quota before moving to the next.",
+        "avoid": "Avoid when you need request-level load balancing between providers.",
+        "example": "Example: Use up all $200 of Deepgram credits before falling back to Groq."
+      },
+      "auto": {
+        "when": "Use when you have one preferred model and only want fallback on failure.",
+        "avoid": "Avoid when you need balanced load between models.",
+        "example": "Example: Primary coding model with cheaper backup for outages."
+      },
+      "lkgp": {
+        "when": "Use when you have one preferred model and only want fallback on failure.",
+        "avoid": "Avoid when you need balanced load between models.",
+        "example": "Example: Primary coding model with cheaper backup for outages."
+      },
+      "context-optimized": {
+        "when": "Use when you have one preferred model and only want fallback on failure.",
+        "avoid": "Avoid when you need balanced load between models.",
+        "example": "Example: Primary coding model with cheaper backup for outages."
       }
     },
     "advancedHelp": {
@@ -993,6 +1013,25 @@
     "candidatePoolHint": "Select which providers this engine should evaluate. Leave empty to use all active providers.",
     "candidatePoolEmpty": "No active providers available yet.",
     "candidatePoolAllProviders": "All providers",
+    "builderStagesDescription": "Move through the stages in order to define the combo, build the steps, choose the routing strategy and review the result.",
+    "builderStepsDescription": "Build each combo step in sequence: provider, model, then account. This allows repeating the same provider and model with different accounts.",
+    "selectProvider": "Select Provider",
+    "selectProviderPlaceholder": "Select provider",
+    "selectModel": "Select Model",
+    "selectModelPlaceholder": "Select provider first",
+    "selectAccount": "Select Account",
+    "autoSelectAccount": "Auto-select account at runtime",
+    "previewNextStep": "Choose provider and model to preview the next step.",
+    "addStep": "Add Step",
+    "comboReference": "Combo Reference",
+    "selectComboToReference": "Select an existing combo to reference",
+    "addComboReference": "Add Combo Reference",
+    "browseLegacyCatalog": "Browse legacy model catalog",
+    "addStepBeforeContinue": "Add at least one step before continuing to the next stage.",
+    "modePackPerformance": "Performance",
+    "modePackBudget": "Budget",
+    "modePackBalanced": "Balanced",
+    "modePackCustom": "Custom",
     "modePackLabel": "Mode Pack",
     "routerStrategyLabel": "Router Strategy",
     "strategyRules": "Rules (6-Factor Scoring)",
@@ -1052,12 +1091,54 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       },
+      "fill-first": {
+        "title": "Quota drain strategy",
+        "description": "Exhausts one provider's quota before moving to the next in chain.",
+        "tip1": "Order models by free quota size — biggest first.",
+        "tip2": "Enable health checks to skip drained providers.",
+        "tip3": "Ideal for free-tier stacking (Deepgram → Groq → NIM)."
+      },
+      "p2c": {
+        "title": "Power-of-Two-Choices",
+        "description": "Picks the less-loaded of two random candidates per request — low latency at scale.",
+        "tip1": "Use with 4+ models for best effect.",
+        "tip2": "Requires latency telemetry enabled in Settings.",
+        "tip3": "Great replacement for round-robin in high-throughput combos."
+      },
+      "context-relay": {
+        "title": "Session continuity first",
+        "description": "Best when account rotation is expected and the next account must inherit a condensed task summary.",
+        "tip1": "Use with providers that rotate accounts for the same model family.",
+        "tip2": "Keep the handoff threshold below the hard quota cutoff to give the summary time to generate.",
+        "tip3": "Set a dedicated summary model only when the primary model is too expensive or unstable."
+      },
       "strict-random": {
         "title": "Shuffle deck distribution",
         "description": "Each model is used exactly once per cycle before reshuffling.",
         "tip1": "Use at least 2 models for meaningful distribution.",
         "tip2": "Works best with equivalent-performance models.",
         "tip3": "Ideal for load balancing across multiple API accounts."
+      },
+      "auto": {
+        "title": "Fail-safe baseline",
+        "description": "Use one primary model and keep fallback chain short and reliable.",
+        "tip1": "Put your most reliable model first.",
+        "tip2": "Keep 1-2 backup models with similar quality.",
+        "tip3": "Use safe retries to absorb transient provider failures."
+      },
+      "lkgp": {
+        "title": "Fail-safe baseline",
+        "description": "Use one primary model and keep fallback chain short and reliable.",
+        "tip1": "Put your most reliable model first.",
+        "tip2": "Keep 1-2 backup models with similar quality.",
+        "tip3": "Use safe retries to absorb transient provider failures."
+      },
+      "context-optimized": {
+        "title": "Fail-safe baseline",
+        "description": "Use one primary model and keep fallback chain short and reliable.",
+        "tip1": "Put your most reliable model first.",
+        "tip2": "Keep 1-2 backup models with similar quality.",
+        "tip3": "Use safe retries to absorb transient provider failures."
       }
     },
     "templateFreeStack": "Free Stack ($0)",
@@ -1087,7 +1168,10 @@
       "basics": { "label": "Basics", "description": "Name and starting template" },
       "steps": { "label": "Steps", "description": "Provider, model, and account selection" },
       "strategy": { "label": "Strategy", "description": "Routing behavior and advanced settings" },
-      "intelligent": { "label": "Smart Routing", "description": "Auto-routing candidate pool, presets, and scoring" },
+      "intelligent": {
+        "label": "Smart Routing",
+        "description": "Auto-routing candidate pool, presets, and scoring"
+      },
       "review": { "label": "Review", "description": "Final validation before saving" }
     },
     "builderStageVisited": "Stage completed",
