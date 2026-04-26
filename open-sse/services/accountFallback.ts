@@ -345,8 +345,8 @@ export function recordModelLockoutFailure(
   const now = Date.now();
   cleanupModelLockKey(key, now);
 
-  // 对于日限额耗尽 (quota_exhausted),设置冷却到第二天 0 点
-  // 使用 exactCooldownMs 避免指数缩放，确保精确到明天 0 点
+  // For quota exhaustion (quota_exhausted), set the cooldown to 0 o'clock the next day.
+  // Use exactCooldownMs to avoid exponential scaling and ensure it is precise down to 0 o'clock the next day.
   if (reason === "quota_exhausted" && typeof options.exactCooldownMs !== "number") {
     options = { ...options, exactCooldownMs: getMsUntilTomorrow() };
   }
@@ -777,7 +777,6 @@ export function classifyError(status, errorText) {
  */
 export function getMsUntilTomorrow(): number {
   const nowMs = Date.now();
-  const now = new Date(nowMs);
   const tomorrow = new Date(nowMs);
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(0, 0, 0, 0);
