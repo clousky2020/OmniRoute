@@ -107,7 +107,7 @@ export async function createMemory(
     // UPDATE existing record
     const updatedMetadata = { ...parseJSON(existing.metadata), ...memory.metadata };
     const stmt = db.prepare(
-      "UPDATE memories SET content = ?, metadata = ?, updated_at = ?, session_id = ?, type = ? WHERE id = ?"
+      "UPDATE memories SET content = ?, metadata = ?, updated_at = ?, session_id = ?, type = ?, expires_at = ? WHERE id = ?"
     );
     stmt.run(
       memory.content,
@@ -115,6 +115,7 @@ export async function createMemory(
       now,
       memory.sessionId,
       memory.type,
+      memory.expiresAt ?? null,
       existing.id
     );
 
