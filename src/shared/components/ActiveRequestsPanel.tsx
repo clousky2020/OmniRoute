@@ -31,8 +31,26 @@ export default function ActiveRequestsPanel() {
   const [rows, setRows] = useState<ActiveRequestRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRow, setSelectedRow] = useState<ActiveRequestRow | null>(null);
+  const [clearing, setClearing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  const handleClearAll = async () => {
+    if (clearing) return;
+    setClearing(true);
+    try {
+      const res = await fetch("/api/logs/active", { method: "DELETE" });
+      if (res.ok) {
+        setRows([]);
+      }
+    } catch (error) {
+      console.error("Failed to clear pending requests:", error);
+    } finally {
+      setClearing(false);
+    }
+  };
 
   useEffect(() => {
+    setMounted(true);
     let cancelled = false;
 
     const load = async () => {
@@ -62,19 +80,12 @@ export default function ActiveRequestsPanel() {
     };
   }, []);
 
-  const handleClearAll = async () => {
-    if (!window.confirm(t("confirmClearActiveRequests") || "Clear all active requests?")) return;
-    try {
-      const res = await fetch("/api/logs/active", { method: "DELETE" });
-      if (res.ok) {
-        setRows([]);
-        setSelectedRow(null);
-      }
-    } catch (error) {
-      console.error("Failed to clear active requests:", error);
-    }
-  };
+  // SSR: return null to avoid hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
+  // Client: hide if no active requests after loading
   if (!loading && rows.length === 0) {
     return null;
   }
@@ -88,17 +99,21 @@ export default function ActiveRequestsPanel() {
           </h3>
           <p className="text-xs text-text-muted">{t("runningRequestsDesc")}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="inline-flex items-center gap-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             {loading ? t("loading") : t("activeCount", { count: rows.length })}
           </div>
           {rows.length > 0 && (
             <button
+              type="button"
               onClick={handleClearAll}
-              className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+              disabled={clearing}
+              className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium text-text-muted transition-colors hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 disabled:opacity-50"
+              title={t("clearPendingRequests")}
             >
-              {t("clearAll") || "Clear All"}
+              <span className="material-symbols-outlined text-[14px]">delete</span>
+              {clearing ? t("clearing") : t("clearAll")}
             </button>
           )}
         </div>
@@ -125,14 +140,15 @@ export default function ActiveRequestsPanel() {
                 <td className="px-4 py-3 font-medium text-text-main">{row.model}</td>
                 <td className="px-4 py-3 text-text-muted">{row.provider}</td>
                 <td className="px-4 py-3 text-text-muted">{row.account}</td>
-                <td className="px-4 py-3 text-text-main">{formatDuration(row.runningTimeMs)}</td>
-                <td className="px-4 py-3 text-text-main">{row.count}</td>
+                <td className="px-4 py-3 text-text-muted">{formatDuration(row.runningTimeMs)}</td>
+                <td className="px-4 py-3 text-text-muted">{row.count}</td>
                 <td className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => setSelectedRow(row)}
-                    className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-main transition-colors hover:bg-sidebar/40"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium text-text-muted transition-colors hover:bg-sidebar/40 hover:text-text-main"
                   >
+                    <span className="material-symbols-outlined text-[14px]">visibility</span>
                     {t("viewPayloads")}
                   </button>
                 </td>
@@ -142,10 +158,11 @@ export default function ActiveRequestsPanel() {
         </table>
       </div>
 
+      {/* Detail Modal */}
       {selectedRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-          <div className="flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-border bg-surface shadow-xl">
+            <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
               <div>
                 <h4 className="text-lg font-semibold text-text-main">
                   {selectedRow.provider} / {selectedRow.model}

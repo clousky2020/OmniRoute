@@ -2131,8 +2131,20 @@ export async function handleChatCore({
     };
   };
 
-  // Create stream controller for disconnect detection
-  const streamController = createStreamController({ onDisconnect, log, provider, model });
+  // Create stream controller for disconnect detection with guaranteed pending request decrement
+  const onDisconnectWithTracking = (event: any) => {
+    // Always decrement pending request count on disconnect
+    trackPendingRequest(model, provider, connectionId, false);
+    // Call original onDisconnect if provided
+    onDisconnect?.(event);
+  };
+
+  const streamController = createStreamController({
+    onDisconnect: onDisconnectWithTracking,
+    log,
+    provider,
+    model,
+  });
 
   const dedupRequestBody = { ...translatedBody, model: `${provider}/${model}`, stream };
   const dedupEnabled = shouldDeduplicate(dedupRequestBody);

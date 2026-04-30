@@ -2341,7 +2341,9 @@
     "clientPayload": "Client Request Payload",
     "upstreamPayload": "Upstream Provider Payload",
     "upstreamNotSentYet": "Not sent to upstream yet",
-    "runningRequestDetailMeta": "Account: {account} — Elapsed: {elapsed}"
+    "runningRequestDetailMeta": "Account: {account} — Elapsed: {elapsed}",
+    "clearAll": "Clear All",
+    "clearPendingRequests": "Reset stuck pending request counters"
   },
   "onboarding": {
     "welcome": "Welcome",
