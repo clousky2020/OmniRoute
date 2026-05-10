@@ -785,7 +785,7 @@ test("checkFallbackError classifies hour quota errors correctly", () => {
   assert.equal(result4.shouldFallback, true);
   assert.equal(result4.reason, RateLimitReason.QUOTA_EXHAUSTED);
 
-  // For API-key providers with 429 status, hour quota errors should still be QUOTA_EXHAUSTED
+  // For API-key providers with 402 status, hour quota errors should be QUOTA_EXHAUSTED
   const result5 = checkFallbackError(402, "hour quota has been exceeded", 0, null, "openai");
   assert.equal(result5.shouldFallback, true);
   assert.equal(result5.reason, RateLimitReason.QUOTA_EXHAUSTED);
