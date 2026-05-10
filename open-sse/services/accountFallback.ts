@@ -1041,7 +1041,8 @@ export function checkFallbackError(
       provider &&
       getProviderCategory(provider) === "apikey" &&
       !errorStr.toLowerCase().includes("has not been used in project") &&
-      !errorStr.toLowerCase().includes("hour quota")
+      !errorStr.toLowerCase().includes("hour quota") &&
+      !errorStr.toLowerCase().includes("quota has been exceeded")
     ) {
       return buildRetryableFallback(RateLimitReason.AUTH_ERROR);
     }

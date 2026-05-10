@@ -112,6 +112,12 @@ export const ERROR_RULES: ErrorRule[] = [
     reason: "quota_exhausted",
   },
   {
+    id: "quota_has_been_exceeded",
+    text: "quota has been exceeded",
+    backoff: true,
+    reason: "quota_exhausted",
+  },
+  {
     id: "quota_exceeded",
     text: "quota exceeded",
     backoff: true,
