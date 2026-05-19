@@ -25,8 +25,10 @@ function resetModuleState() {
   // Clear all internal maps by re-importing or using exported reset functions
   // Since apiKeyRotator doesn't export a clearAll function, we use resetKeyStatus
   const allHealth = getAllKeyHealth();
-  for (const keyId of Object.keys(allHealth)) {
-    resetKeyStatus(keyId);
+  for (const scopedKey of Object.keys(allHealth)) {
+    // scopedKey format is "connectionId:keyId"
+    const keyId = scopedKey.includes(":") ? scopedKey.split(":")[1] : scopedKey;
+    resetKeyStatus("test-conn", keyId);
   }
 }
 
@@ -146,32 +148,32 @@ describe("apiKeyRotator Health Tracking", () => {
 
   describe("recordKeyFailure", () => {
     it("should increment failure count", () => {
-      const health = recordKeyFailure("primary");
+      const health = recordKeyFailure("test-conn", "primary");
       assert.equal(health.failures, 1);
       assert.equal(health.status, "warning");
     });
 
     it("should mark as invalid after 3 consecutive failures", () => {
-      recordKeyFailure("primary");
-      recordKeyFailure("primary");
-      const health = recordKeyFailure("primary");
+      recordKeyFailure("test-conn", "primary");
+      recordKeyFailure("test-conn", "primary");
+      const health = recordKeyFailure("test-conn", "primary");
 
       assert.equal(health.failures, 3);
       assert.equal(health.status, "invalid");
     });
 
     it("should track totalRequests and totalFailures", () => {
-      const h1 = recordKeyFailure("test-key-1");
+      const h1 = recordKeyFailure("test-conn", "test-key-1");
       assert.equal(h1.totalRequests, 1);
       assert.equal(h1.totalFailures, 1);
 
-      const h2 = recordKeyFailure("test-key-1");
+      const h2 = recordKeyFailure("test-conn", "test-key-1");
       assert.equal(h2.totalRequests, 2);
       assert.equal(h2.totalFailures, 2);
     });
 
     it("should set lastFailure timestamp", () => {
-      const health = recordKeyFailure("primary");
+      const health = recordKeyFailure("test-conn", "primary");
       assert.ok(health.lastFailure, "lastFailure should be set");
       assert.ok(new Date(health.lastFailure!).getTime() > 0, "lastFailure should be valid date");
     });
@@ -180,29 +182,29 @@ describe("apiKeyRotator Health Tracking", () => {
   describe("recordKeySuccess", () => {
     it("should reset failure count and mark as active", () => {
       // First record some failures
-      recordKeyFailure("primary");
-      recordKeyFailure("primary");
+      recordKeyFailure("test-conn", "primary");
+      recordKeyFailure("test-conn", "primary");
 
       // Then record success
-      const health = recordKeySuccess("primary");
+      const health = recordKeySuccess("test-conn", "primary");
       assert.equal(health.failures, 0);
       assert.equal(health.status, "active");
     });
 
     it("should recover from warning status", () => {
-      recordKeyFailure("primary"); // 1 failure -> warning
-      const afterSuccess = recordKeySuccess("primary");
+      recordKeyFailure("test-conn", "primary"); // 1 failure -> warning
+      const afterSuccess = recordKeySuccess("test-conn", "primary");
 
       assert.equal(afterSuccess.status, "active");
       assert.equal(afterSuccess.failures, 0);
     });
 
     it("should recover from invalid status", () => {
-      recordKeyFailure("primary");
-      recordKeyFailure("primary");
-      recordKeyFailure("primary"); // 3 failures -> invalid
+      recordKeyFailure("test-conn", "primary");
+      recordKeyFailure("test-conn", "primary");
+      recordKeyFailure("test-conn", "primary"); // 3 failures -> invalid
 
-      const afterSuccess = recordKeySuccess("primary");
+      const afterSuccess = recordKeySuccess("test-conn", "primary");
       assert.equal(afterSuccess.status, "active");
       assert.equal(afterSuccess.failures, 0);
     });
@@ -293,8 +295,8 @@ describe("apiKeyRotator Health Tracking", () => {
     });
   });
 
-  describe("Key isolation per connection (BUG TEST)", () => {
-    it("BUG: health state is not isolated per connection", () => {
+  describe("Key isolation per connection", () => {
+    it("should isolate health state per connection", () => {
       // Connection A has primary key that failed
       const connA = "conn-A";
       const connB = "conn-B";
@@ -302,31 +304,21 @@ describe("apiKeyRotator Health Tracking", () => {
       const primaryKeyB = "pk-B";
 
       // Record failure for connection A's primary key
-      recordKeyFailure("primary");
+      recordKeyFailure(connA, "primary");
+      recordKeyFailure(connA, "primary");
+      recordKeyFailure(connA, "primary"); // 3 failures -> invalid for connA only
 
-      // Now connection B should NOT be affected, but currently it IS
-      // because recordKeyFailure uses global "primary" keyId, not connection-scoped
-      const healthA: Record<string, KeyHealth> = {};
-      const healthB: Record<string, KeyHealth> = {};
+      // Connection B should NOT be affected - health is isolated
+      const keyA = getValidApiKey(connA, primaryKeyA, []);
+      const keyB = getValidApiKey(connB, primaryKeyB, []);
 
-      // This demonstrates the BUG: health tracking is not connection-scoped
-      // Both connections share the same "primary" health state
-      const keyA = getValidApiKey(connA, primaryKeyA, [], healthA);
-      const keyB = getValidApiKey(connB, primaryKeyB, [], healthB);
-
-      // BUG: keyA should work because healthA is empty (no failures passed in)
-      // But internal getOrCreateHealth("primary") returns the global state
-      // So keyA will also be affected by the failure recorded above
-
-      // This test documents the expected behavior vs actual behavior
-      // Expected: both should return keys since passed-in health is empty
-      // Actual: internal state affects both due to getOrCreateHealth fallback
-
-      // For now, just verify that keys are returned when health param is empty
-      assert.ok(keyA || keyB, "at least one key should be returned");
+      // keyA should be null (primary is invalid, no extra keys)
+      assert.equal(keyA, null);
+      // keyB should work (no failures recorded for connB)
+      assert.equal(keyB, primaryKeyB);
     });
 
-    it("BUG: getLastUsedKeyId does not isolate per connection", () => {
+    it("should isolate lastUsedKeyId per connection", () => {
       const connA = "conn-A";
       const connB = "conn-B";
 
@@ -339,7 +331,7 @@ describe("apiKeyRotator Health Tracking", () => {
       // Both should have their own lastUsedKeyId
       assert.ok(lastA);
       assert.ok(lastB);
-      // This should pass - lastUsedKeyId IS connection-scoped
+      // lastUsedKeyId IS connection-scoped - this should pass
     });
   });
 });
@@ -369,9 +361,9 @@ describe("Integration: 401 handling should skip key not connection", () => {
     trackConnectionExtraKeys(connectionId, extraKeys);
 
     // Record 3 failures on primary key
-    recordKeyFailure("primary");
-    recordKeyFailure("primary");
-    const finalHealth = recordKeyFailure("primary");
+    recordKeyFailure(connectionId, "primary");
+    recordKeyFailure(connectionId, "primary");
+    const finalHealth = recordKeyFailure(connectionId, "primary");
 
     // Primary key should now be invalid
     assert.equal(finalHealth.status, "invalid");
@@ -416,7 +408,7 @@ describe("E2E: Complete 401 flow simulation", () => {
     assert.equal(getLastUsedKeyId(connectionId), "primary");
 
     // Step 3: Simulate 401 failure on primary key
-    const health1 = recordKeyFailure("primary");
+    const health1 = recordKeyFailure(connectionId, "primary");
     assert.equal(health1.status, "warning");
     assert.equal(health1.failures, 1);
 
@@ -425,12 +417,12 @@ describe("E2E: Complete 401 flow simulation", () => {
     assert.ok(key2 === primaryKey || extraKeys.includes(key2!), "should return a valid key");
 
     // Step 5: Second 401 failure
-    const health2 = recordKeyFailure("primary");
+    const health2 = recordKeyFailure(connectionId, "primary");
     assert.equal(health2.failures, 2);
     assert.equal(health2.status, "warning");
 
     // Step 6: Third 401 failure - now primary becomes invalid
-    const health3 = recordKeyFailure("primary");
+    const health3 = recordKeyFailure(connectionId, "primary");
     assert.equal(health3.failures, 3);
     assert.equal(health3.status, "invalid");
 
@@ -452,12 +444,12 @@ describe("E2E: Complete 401 flow simulation", () => {
     // Step 10: Success on extra key - mark it as successful
     const usedKeyId = getLastUsedKeyId(connectionId);
     assert.ok(usedKeyId?.startsWith("extra_"));
-    const successHealth = recordKeySuccess(usedKeyId!);
+    const successHealth = recordKeySuccess(connectionId, usedKeyId!);
     assert.equal(successHealth.status, "active");
     assert.equal(successHealth.failures, 0);
 
     // Step 11: Recover primary key
-    const recoveredHealth = recordKeySuccess("primary");
+    const recoveredHealth = recordKeySuccess(connectionId, "primary");
     assert.equal(recoveredHealth.status, "active");
     assert.equal(recoveredHealth.failures, 0);
 
@@ -476,8 +468,8 @@ describe("E2E: Complete 401 flow simulation", () => {
 
     // Mark primary and extra_0 as invalid
     for (let i = 0; i < 3; i++) {
-      recordKeyFailure("primary");
-      recordKeyFailure("extra_0");
+      recordKeyFailure(connectionId, "primary");
+      recordKeyFailure(connectionId, "extra_0");
     }
 
     const health: Record<string, KeyHealth> = {
@@ -566,7 +558,7 @@ describe("E2E: Complete 401 flow simulation", () => {
     trackConnectionExtraKeys(connectionId, extraKeys);
 
     // Record failures
-    const healthBefore = recordKeyFailure("primary");
+    const healthBefore = recordKeyFailure(connectionId, "primary");
     assert.equal(healthBefore.failures, 1);
 
     // Simulate DB sync (persist health)
@@ -610,7 +602,7 @@ describe("A3 Guard Integration Test", () => {
 
     // Simulate: 401 occurs on primary key
     // Step 1: T07 code in chatCore.ts records key failure
-    const health = recordKeyFailure("primary");
+    const health = recordKeyFailure(connectionId, "primary");
 
     // Step 2: A3 guard in chat.ts checks if connection has extra keys
     const hasExtraKeys = connectionHasExtraKeys(connectionId);
@@ -642,7 +634,7 @@ describe("A3 Guard Integration Test", () => {
     assert.equal(connectionHasExtraKeys(connectionId), false);
 
     // Simulate: 401 occurs
-    recordKeyFailure("primary");
+    recordKeyFailure(connectionId, "primary");
 
     // A3 guard check
     const hasExtraKeys = connectionHasExtraKeys(connectionId);

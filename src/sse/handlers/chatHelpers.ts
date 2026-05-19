@@ -346,7 +346,11 @@ export async function executeChatWithBreaker({
             if (!credentials.connectionId) return;
             // A3 guard: if 401 and connection has extra keys, skip connection-level disable
             // (key-level failure already recorded in chatCore.ts via T07)
-            const hasExtraKeys = connectionHasExtraKeys(credentials.connectionId);
+            // Check extra keys directly from credentials for reliability across restarts
+            const extraKeys =
+              (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
+            const hasExtraKeys =
+              extraKeys.length > 0 || connectionHasExtraKeys(credentials.connectionId);
             const is401 = Number(failure?.status) === 401;
             if (is401 && hasExtraKeys) {
               log.debug(

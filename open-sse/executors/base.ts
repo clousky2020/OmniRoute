@@ -1,12 +1,7 @@
 import { HTTP_STATUS, FETCH_TIMEOUT_MS } from "../config/constants.ts";
 import { applyFingerprint, isCliCompatEnabled } from "../config/cliFingerprints.ts";
 import { supportsXHighEffort } from "../config/providerModels.ts";
-import {
-  getRotatingApiKey,
-  getValidApiKey,
-  recordKeyFailure,
-  recordKeySuccess,
-} from "../services/apiKeyRotator.ts";
+import { getRotatingApiKey, getValidApiKey } from "../services/apiKeyRotator.ts";
 import type { KeyHealth } from "../services/apiKeyRotator.ts";
 import { getOpenAICompatibleType, isClaudeCodeCompatible } from "../services/provider.ts";
 import type { ProviderRequestDefaults } from "../services/providerRequestDefaults.ts";
@@ -347,10 +342,18 @@ export class BaseExecutor {
       // T07: rotate between primary + extra API keys when extraApiKeys is configured
       const extraKeys =
         (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
+      // Extract health directly from credentials for reliability across all call paths
+      const credentialsHealth =
+        health ??
+        (credentials.providerSpecificData?.apiKeyHealth as Record<string, KeyHealth> | undefined);
       const effectiveKey =
         extraKeys.length > 0 && credentials.connectionId
-          ? getValidApiKey(credentials.connectionId, credentials.apiKey, extraKeys, health) ||
-            credentials.apiKey
+          ? getValidApiKey(
+              credentials.connectionId,
+              credentials.apiKey,
+              extraKeys,
+              credentialsHealth
+            ) || credentials.apiKey
           : credentials.apiKey;
       headers["Authorization"] = `Bearer ${effectiveKey}`;
     }
@@ -937,20 +940,8 @@ export class BaseExecutor {
           continue;
         }
 
-        // T07: Handle 401 authentication errors with API key rotation
+        // T07: Handle 401 authentication errors — log and continue to fallback
         if (response.status === 401 && credentials.connectionId && credentials.apiKey) {
-          const extraKeys =
-            (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
-
-          // Determine current key ID based on rotation index
-          const currentKeyIndex = (() => {
-            if (extraKeys.length === 0) return "primary";
-            // Approximate: we don't know exact index without tracking, so try all
-            return null;
-          })();
-
-          // Mark current key as failed (we'll track which one later in health system)
-          // For now, just continue to fallback
           log?.warn?.("AUTH", `401 on ${url} - API key may be invalid`);
         }
 

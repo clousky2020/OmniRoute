@@ -1095,9 +1095,12 @@ async function handleSingleModelChat(
       }
 
       // 8. Fallback to next account
-      // A3 guard: if 401 and connection has extra keys, skip key-level failure only
+      // A3 guard: if 401 and connection has extra keys, skip connection-level disable
       // (key-level failure already recorded in chatCore.ts via T07)
-      const hasExtraKeys = connectionHasExtraKeys(credentials.connectionId);
+      // Check extra keys directly from credentials for reliability across restarts
+      const extraKeys =
+        (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
+      const hasExtraKeys = extraKeys.length > 0 || connectionHasExtraKeys(credentials.connectionId);
       const is401 = result.status === 401;
       const skipConnectionDisable = is401 && hasExtraKeys;
 

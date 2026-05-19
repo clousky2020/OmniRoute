@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -135,10 +135,11 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
     fetchData();
   }, [fetchData]);
 
-  // T07: Check for invalid API keys and show notification
+  // T07: Check for invalid API keys and show notification (once per session)
+  const notifiedInvalidKeys = useRef<Set<string>>(new Set());
   useEffect(() => {
     const checkApiKeyHealth = () => {
-      let invalidKeyCount = 0;
+      const newInvalidKeys = new Set<string>();
       const invalidConnections: string[] = [];
 
       for (const conn of providerConnections) {
@@ -157,19 +158,27 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
         const invalidKeys = Object.entries(health).filter(([_, h]) => h.status === "invalid");
 
         if (invalidKeys.length > 0) {
-          invalidKeyCount += invalidKeys.length;
+          for (const [keyId] of invalidKeys) {
+            newInvalidKeys.add(`${conn.id}:${keyId}`);
+          }
           invalidConnections.push(conn.name || conn.id);
         }
       }
 
-      if (invalidKeyCount > 0) {
+      // Only notify for newly invalid keys (not already notified)
+      const hasNewInvalid = Array.from(newInvalidKeys).some(
+        (k) => !notifiedInvalidKeys.current.has(k)
+      );
+      if (hasNewInvalid) {
         notificationStore.warning(
           t("apiKeyInvalidAlert", {
-            count: invalidKeyCount,
+            count: newInvalidKeys.size,
             connections: invalidConnections.join(", "),
           }),
           t("apiKeyInvalidAlertTitle")
         );
+        // Mark all current invalid keys as notified
+        newInvalidKeys.forEach((k) => notifiedInvalidKeys.current.add(k));
       }
     };
 

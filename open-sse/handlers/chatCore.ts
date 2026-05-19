@@ -3185,7 +3185,7 @@ export async function handleChatCore({
                 const currentKeyId = getLastUsedKeyId(credentials.connectionId) || "primary";
 
                 // Record failure for the current key
-                const updatedHealth = recordKeyFailure(currentKeyId);
+                const updatedHealth = recordKeyFailure(credentials.connectionId, currentKeyId);
                 log?.warn?.(
                   "AUTH",
                   `401 on connection ${credentials.connectionId.slice(0, 8)} - key marked as failed (${updatedHealth.failures}/${3})`
@@ -3372,7 +3372,7 @@ export async function handleChatCore({
 
             // Authentication failed - mark current key as failed
             const currentKeyId = getLastUsedKeyId(credentials.connectionId) || "primary";
-            const updatedHealth = recordKeyFailure(currentKeyId);
+            const updatedHealth = recordKeyFailure(credentials.connectionId, currentKeyId);
             log?.warn?.(
               "AUTH",
               `401 on connection ${credentials.connectionId.slice(0, 8)} - key marked as failed (${updatedHealth.failures}/3)`
@@ -3398,7 +3398,7 @@ export async function handleChatCore({
           } else if (status >= 200 && status < 300) {
             // Success - mark current key as successful
             const currentKeyId = getLastUsedKeyId(credentials.connectionId) || "primary";
-            const updatedHealth = recordKeySuccess(currentKeyId);
+            const updatedHealth = recordKeySuccess(credentials.connectionId, currentKeyId);
 
             // Persist to DB if status was warning/invalid and now active
             const prevStatus = health?.[currentKeyId]?.status;

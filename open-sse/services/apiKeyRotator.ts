@@ -37,9 +37,13 @@ export function trackConnectionExtraKeys(connectionId: string, extraKeys: string
 
 /**
  * Check if a connection has extra API keys (for the A3 guard).
- * Returns false for unknown connections (conservative: don't skip the guard).
+ * Uses the in-memory cache (populated during request execution) and falls back
+ * to direct extraKeys data when provided, ensuring reliability across restarts.
  */
-export function connectionHasExtraKeys(connectionId: string): boolean {
+export function connectionHasExtraKeys(connectionId: string, extraKeys?: string[]): boolean {
+  // Direct data check is always authoritative
+  if (extraKeys && extraKeys.length > 0) return true;
+  // Fall back to in-memory cache (populated as side-effect during execution)
   return _connectionExtraKeys.get(connectionId) ?? false;
 }
 
@@ -59,11 +63,12 @@ const _keyHealth = new Map<string, KeyHealth>();
 const FAILURE_THRESHOLD = 3; // Mark as invalid after 3 consecutive failures
 
 /**
- * Get or create health status for a specific key.
+ * Get or create health status for a specific key within a connection scope.
  */
-function getOrCreateHealth(keyId: string): KeyHealth {
-  if (!_keyHealth.has(keyId)) {
-    _keyHealth.set(keyId, {
+function getOrCreateHealth(connectionId: string, keyId: string): KeyHealth {
+  const scopedKey = `${connectionId}:${keyId}`;
+  if (!_keyHealth.has(scopedKey)) {
+    _keyHealth.set(scopedKey, {
       status: "active",
       failures: 0,
       lastFailure: null,
@@ -72,7 +77,7 @@ function getOrCreateHealth(keyId: string): KeyHealth {
       totalFailures: 0,
     });
   }
-  return _keyHealth.get(keyId)!;
+  return _keyHealth.get(scopedKey)!;
 }
 
 /**
@@ -98,7 +103,7 @@ export function getValidApiKey(
 
   // Add primary key if valid
   if (primaryKey) {
-    const primaryHealth = health?.["primary"] || getOrCreateHealth("primary");
+    const primaryHealth = health?.["primary"] || getOrCreateHealth(connectionId, "primary");
     if (primaryHealth.status !== "invalid") {
       allKeys.push({ key: primaryKey, keyId: "primary" });
     }
@@ -107,7 +112,7 @@ export function getValidApiKey(
   // Add extra keys if valid
   for (let i = 0; i < validExtras.length; i++) {
     const keyId = `extra_${i}`;
-    const keyHealth = health?.[keyId] || getOrCreateHealth(keyId);
+    const keyHealth = health?.[keyId] || getOrCreateHealth(connectionId, keyId);
     if (keyHealth.status !== "invalid") {
       allKeys.push({ key: validExtras[i], keyId });
     }
@@ -163,11 +168,12 @@ export function getRotatingApiKey(
  * Record a failed authentication attempt for a key.
  * Increments failure count and marks as "invalid" if threshold exceeded.
  *
+ * @param connectionId - Connection scope for health state isolation
  * @param keyId - Key identifier ("primary" | "extra_0" | ...)
  * @returns Updated health status
  */
-export function recordKeyFailure(keyId: string): KeyHealth {
-  const health = getOrCreateHealth(keyId);
+export function recordKeyFailure(connectionId: string, keyId: string): KeyHealth {
+  const health = getOrCreateHealth(connectionId, keyId);
   health.failures++;
   health.totalRequests++;
   health.totalFailures++;
@@ -186,11 +192,12 @@ export function recordKeyFailure(keyId: string): KeyHealth {
  * Record a successful authentication attempt for a key.
  * Resets failure count and marks as "active".
  *
+ * @param connectionId - Connection scope for health state isolation
  * @param keyId - Key identifier ("primary" | "extra_0" | ...)
  * @returns Updated health status
  */
-export function recordKeySuccess(keyId: string): KeyHealth {
-  const health = getOrCreateHealth(keyId);
+export function recordKeySuccess(connectionId: string, keyId: string): KeyHealth {
+  const health = getOrCreateHealth(connectionId, keyId);
   health.failures = 0;
   health.totalRequests++;
   health.lastSuccess = new Date().toISOString();
@@ -211,6 +218,7 @@ export function getInvalidKeyCount(health?: Record<string, KeyHealth>): number {
  * Get health statistics for display.
  */
 export function getKeyHealthStats(
+  connectionId: string,
   primaryKey: string,
   extraKeys: string[] = [],
   health?: Record<string, KeyHealth>
@@ -228,7 +236,7 @@ export function getKeyHealthStats(
   let invalid = 0;
 
   for (const keyId of keys) {
-    const h = health?.[keyId] || getOrCreateHealth(keyId);
+    const h = health?.[keyId] || getOrCreateHealth(connectionId, keyId);
     if (h.status === "active") active++;
     else if (h.status === "warning") warning++;
     else if (h.status === "invalid") invalid++;
@@ -241,8 +249,8 @@ export function getKeyHealthStats(
  * Reset a key's health status to active.
  * Called manually from Dashboard to recover from false positives.
  */
-export function resetKeyStatus(keyId: string): KeyHealth {
-  const health = getOrCreateHealth(keyId);
+export function resetKeyStatus(connectionId: string, keyId: string): KeyHealth {
+  const health = getOrCreateHealth(connectionId, keyId);
   health.failures = 0;
   health.status = "active";
   health.lastFailure = null;
