@@ -135,6 +135,49 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
     fetchData();
   }, [fetchData]);
 
+  // T07: Check for invalid API keys and show notification
+  useEffect(() => {
+    const checkApiKeyHealth = () => {
+      let invalidKeyCount = 0;
+      const invalidConnections: string[] = [];
+
+      for (const conn of providerConnections) {
+        const health = conn.providerSpecificData?.apiKeyHealth as
+          | Record<
+              string,
+              {
+                status: "active" | "warning" | "invalid";
+                failures: number;
+                lastFailure: string | null;
+              }
+            >
+          | undefined;
+        if (!health) continue;
+
+        const invalidKeys = Object.entries(health).filter(([_, h]) => h.status === "invalid");
+
+        if (invalidKeys.length > 0) {
+          invalidKeyCount += invalidKeys.length;
+          invalidConnections.push(conn.name || conn.id);
+        }
+      }
+
+      if (invalidKeyCount > 0) {
+        notificationStore.warning(
+          t("apiKeyInvalidAlert", {
+            count: invalidKeyCount,
+            connections: invalidConnections.join(", "),
+          }),
+          t("apiKeyInvalidAlertTitle")
+        );
+      }
+    };
+
+    if (providerConnections.length > 0) {
+      checkApiKeyHealth();
+    }
+  }, [providerConnections, t]);
+
   const providerStats = useMemo(() => {
     return Object.entries(AI_PROVIDERS).map(([providerId, providerInfo]) => {
       const connections = providerConnections.filter((conn) => conn.provider === providerId);
