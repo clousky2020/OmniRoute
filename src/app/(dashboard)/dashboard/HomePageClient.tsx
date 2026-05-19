@@ -79,6 +79,7 @@ function mergeUpdateStep(steps: UpdateStep[], nextStep: UpdateStep) {
 }
 
 export default function HomePageClient({ machineId }: HomePageClientProps) {
+  const router = useRouter();
   const t = useTranslations("home");
   const tc = useTranslations("common");
   const ts = useTranslations("sidebar");
@@ -142,6 +143,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
     const checkApiKeyHealth = () => {
       const newInvalidKeys = new Set<string>();
       const invalidConnections: string[] = [];
+      let firstInvalidProviderId: string | null = null;
 
       for (const conn of providerConnections) {
         const health = conn.providerSpecificData?.apiKeyHealth as
@@ -162,6 +164,9 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
           for (const [keyId] of invalidKeys) {
             newInvalidKeys.add(`${conn.id}:${keyId}`);
           }
+          if (firstInvalidProviderId === null) {
+            firstInvalidProviderId = conn.provider;
+          }
           invalidConnections.push(conn.name || conn.id);
         }
       }
@@ -171,13 +176,21 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
         (k) => !notifiedInvalidKeys.current.has(k)
       );
       if (hasNewInvalid) {
-        useNotificationStore.getState().warning(
-          tp("apiKeyInvalidAlert", {
+        const navigateTo =
+          newInvalidKeys.size === 1 && firstInvalidProviderId
+            ? `/dashboard/providers/${firstInvalidProviderId}`
+            : "/dashboard/providers";
+
+        useNotificationStore.getState().addNotification({
+          type: "warning",
+          message: tp("apiKeyInvalidAlert", {
             count: newInvalidKeys.size,
             connections: invalidConnections.join(", "),
           }),
-          tp("apiKeyInvalidAlertTitle")
-        );
+          title: tp("apiKeyInvalidAlertTitle"),
+          duration: 10000,
+          onClick: () => router.push(navigateTo),
+        });
         // Mark all current invalid keys as notified
         newInvalidKeys.forEach((k) => notifiedInvalidKeys.current.add(k));
       }
@@ -186,7 +199,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
     if (providerConnections.length > 0) {
       checkApiKeyHealth();
     }
-  }, [providerConnections, t, tp]);
+  }, [providerConnections, t, tp, router]);
 
   const providerStats = useMemo(() => {
     return Object.entries(AI_PROVIDERS).map(([providerId, providerInfo]) => {
