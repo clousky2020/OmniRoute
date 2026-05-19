@@ -82,6 +82,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
   const t = useTranslations("home");
   const tc = useTranslations("common");
   const ts = useTranslations("sidebar");
+  const tp = useTranslations("providers");
   const [providerConnections, setProviderConnections] = useState([]);
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -170,12 +171,12 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
         (k) => !notifiedInvalidKeys.current.has(k)
       );
       if (hasNewInvalid) {
-        notificationStore.warning(
-          t("apiKeyInvalidAlert", {
+        useNotificationStore.getState().warning(
+          tp("apiKeyInvalidAlert", {
             count: newInvalidKeys.size,
             connections: invalidConnections.join(", "),
           }),
-          t("apiKeyInvalidAlertTitle")
+          tp("apiKeyInvalidAlertTitle")
         );
         // Mark all current invalid keys as notified
         newInvalidKeys.forEach((k) => notifiedInvalidKeys.current.add(k));
@@ -185,7 +186,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
     if (providerConnections.length > 0) {
       checkApiKeyHealth();
     }
-  }, [providerConnections, t]);
+  }, [providerConnections, t, tp]);
 
   const providerStats = useMemo(() => {
     return Object.entries(AI_PROVIDERS).map(([providerId, providerInfo]) => {
