@@ -704,8 +704,8 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       const action = stream ? "streamGenerateContent?alt=sse" : "generateContent";
       return `${base}:${action}`;
     },
-    authType: "oauth",
-    authHeader: "bearer",
+    authType: "apikey",
+    authHeader: "x-goog-api-key",
     defaultContextLength: 1048576,
     oauth: {
       clientIdEnv: "GEMINI_CLI_OAUTH_CLIENT_ID",
@@ -714,6 +714,8 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       clientSecretDefault: resolvePublicCred("gemini_alt"),
     },
     models: [
+      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
+      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash" },
       { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
       { id: "gemini-3.1-pro-preview-customtools", name: "Gemini 3.1 Pro Preview Custom Tools" },
       { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
@@ -1039,6 +1041,8 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     clientVersion: CURSOR_REGISTRY_VERSION,
     models: [
       { id: "auto", name: "Auto (Server Picks)" },
+      { id: "composer-2.5-fast", name: "Composer 2.5 Fast" },
+      { id: "composer-2.5", name: "Composer 2.5" },
       { id: "composer-2-fast", name: "Composer 2 Fast" },
       { id: "composer-2", name: "Composer 2" },
       //
@@ -1941,6 +1945,68 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     ],
   },
 
+  haiper: {
+    id: "haiper",
+    alias: "hp",
+    format: "openai",
+    executor: "default",
+    baseUrl: "https://api.haiper.ai/v1",
+    authType: "apikey",
+    authHeader: "HAIPER_KEY",
+    models: [
+      { id: "gen2", name: "Gen 2 Video" },
+      { id: "gen2-image", name: "Gen 2 Image" },
+    ],
+  },
+  leonardo: {
+    id: "leonardo",
+    alias: "leo",
+    format: "openai",
+    executor: "default",
+    baseUrl: "https://cloud.leonardo.ai/api/rest/v1",
+    authType: "apikey",
+    authHeader: "bearer",
+    models: [
+      { id: "phoenix", name: "Phoenix" },
+      { id: "sdxl", name: "SDXL" },
+    ],
+  },
+  ideogram: {
+    id: "ideogram",
+    alias: "ideo",
+    format: "openai",
+    executor: "default",
+    baseUrl: "https://api.ideogram.ai",
+    authType: "apikey",
+    authHeader: "Api-Key",
+    models: [
+      { id: "V_3", name: "Ideogram V3" },
+      { id: "V_2A", name: "Ideogram V2A" },
+    ],
+  },
+  suno: {
+    id: "suno",
+    alias: "suno",
+    format: "openai",
+    executor: "default",
+    baseUrl: "https://studio-api.suno.ai/api/generate/v2/",
+    authType: "cookie",
+    authHeader: "cookie",
+    models: [
+      { id: "chirp-v3-5", name: "Chirp V3.5" },
+      { id: "chirp-v4", name: "Chirp V4" },
+    ],
+  },
+  udio: {
+    id: "udio",
+    alias: "udio",
+    format: "openai",
+    executor: "default",
+    baseUrl: "https://www.udio.com/api/generate-proxy",
+    authType: "apikey",
+    authHeader: "cookie",
+    models: [{ id: "udio-default", name: "Udio Default" }],
+  },
   groq: {
     id: "groq",
     alias: "groq",
@@ -2123,6 +2189,24 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       { id: "expert", name: "Grok 4.20 Thinking", toolCalling: true },
       { id: "heavy", name: "Grok 4.20 Multi Agent", toolCalling: true },
       { id: "grok-420-computer-use-sa", name: "Grok 4.3 (Beta)", toolCalling: true },
+    ],
+  },
+
+  "gemini-web": {
+    id: "gemini-web",
+    alias: "gweb",
+    format: "openai",
+    executor: "gemini-web",
+    baseUrl: "https://gemini.google.com/app",
+    authType: "apikey",
+    authHeader: "cookie",
+    models: [
+      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+      { id: "gemini-2.0-pro", name: "Gemini 2.0 Pro" },
+      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
+      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
+      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash" },
     ],
   },
 
