@@ -1066,7 +1066,8 @@
     "updateNow": "立即更新",
     "updating": "更新中...",
     "updateAvailableDesc": "有新版本可用。点击更新。",
-    "updateStarted": "更新已开始..."
+    "updateStarted": "更新已开始...",
+    "providerTopology": "提供商拓扑"
   },
   "analytics": {
     "title": "分析",
@@ -3304,7 +3305,17 @@
     "freeTierProviders": "免费层提供商",
     "freeTierLabel": "有免费额度",
     "freeTierProvidersDesc": "提供免费层的提供商——有些需要注册 API 密钥，有些无需任何凭证。",
-    "showFreeOnly": "仅显示免费"
+    "showFreeOnly": "仅显示免费",
+    "ideProviders": "IDE 提供商",
+    "ideProvidersDesc": "内置 AI 订阅的编辑器。使用提供商页面直接从 IDE 密钥链导入凭据。",
+    "providerDetailFastTierTooltip": "默认对所有 Codex 连接应用 Codex Fast 层级",
+    "providerDetailFastDefaultLabel": "快速默认",
+    "providerDetailBrowserManualConnect": "浏览器/手动连接",
+    "providerDetailAuthUrl": "认证 URL",
+    "providerDetailCallbackUrl": "回调 URL",
+    "providerDetailValidClaudeCredentialsFile": "有效的 Claude 凭据文件",
+    "providerDetailPathAutoDetectedAllOs": "路径按操作系统自动检测（Linux/Mac/Windows）。",
+    "noIdeProviders": "没有符合当前筛选条件的 IDE 提供商。"
   },
   "settings": {
     "title": "设置",
