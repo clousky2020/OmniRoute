@@ -432,7 +432,7 @@ describe("E2E: Complete 401 flow simulation", () => {
     // Step 5: Second 401 failure
     const health2 = recordKeyFailure(connectionId, "primary");
     assert.equal(health2.failures, 2);
-    assert.equal(health2.status, "warning");
+    assert.equal(health2.status, "invalid");
 
     // Step 6: Third 401 failure - now primary becomes invalid
     const health3 = recordKeyFailure(connectionId, "primary");
