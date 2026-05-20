@@ -56,7 +56,7 @@ interface KeyHealth {
 
 const _keyHealth = new Map<string, KeyHealth>();
 
-const FAILURE_THRESHOLD = 1; // Mark as invalid after 1 consecutive failure (immediate)
+const FAILURE_THRESHOLD = 2; // Mark as invalid after 2 consecutive failures
 
 /**
  * Get or create health status for a specific key within a connection scope.
