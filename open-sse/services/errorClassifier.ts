@@ -112,15 +112,14 @@ export function classifyProviderError(
     return PROVIDER_ERROR_TYPES.QUOTA_EXHAUSTED;
   }
 
-  if (creditsExhausted && statusCode === 429 && preserveQuota429) {
+  if (creditsExhausted && statusCode === 429) {
     return PROVIDER_ERROR_TYPES.QUOTA_EXHAUSTED;
   }
 
-  // API-key providers route 429 cooldowns through the resilience-aware fallback layer.
-  // OAuth providers keep their existing quota semantics because some of them encode
-  // longer quota windows as 429 responses.
+  // 429 with explicit daily-quota keywords → long cooldown, regardless of provider type.
+  // Plain 429 → short rate-limit cooldown (resilience layer handles fallback).
   if (statusCode === 429) {
-    if (preserveQuota429 && isDailyQuotaExhausted(bodyStr)) {
+    if (isDailyQuotaExhausted(bodyStr)) {
       return PROVIDER_ERROR_TYPES.QUOTA_EXHAUSTED;
     }
     return PROVIDER_ERROR_TYPES.RATE_LIMITED;
