@@ -36,7 +36,7 @@ import {
   isQuotaPreflightEnabled,
 } from "@omniroute/open-sse/services/quotaPreflight.ts";
 import { resolveResilienceSettings } from "@/lib/resilience/settings";
-import { syncHealthFromDB } from "@omniroute/open-sse/services/apiKeyRotator.ts";
+import { syncHealthFromDB, type KeyHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import {
   classifyProviderError,
   PROVIDER_ERROR_TYPES,
@@ -1317,20 +1317,8 @@ export async function getProviderCredentials(
       connection = orderedConnections[0];
     }
 
-    // T07: Sync apiKeyHealth from DB to in-memory _keyHealth map
-    // This ensures resolveKeyForRequest sees persisted health status
     const apiKeyHealth = connection.providerSpecificData?.apiKeyHealth as
-      | Record<
-          string,
-          {
-            status: string;
-            failures: number;
-            lastFailure: string | null;
-            lastSuccess: string | null;
-            totalRequests: number;
-            totalFailures: number;
-          }
-        >
+      | Record<string, KeyHealth>
       | undefined;
     if (apiKeyHealth) {
       syncHealthFromDB(connection.id, apiKeyHealth);

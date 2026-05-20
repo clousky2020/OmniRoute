@@ -678,14 +678,11 @@ export async function testSingleConnection(connectionId: string, validationModel
   if (result.valid) {
     updateData.backoffLevel = 0;
 
-    const connection = await getProviderConnectionById(connectionId);
     const psd = connection?.providerSpecificData as Record<string, unknown> | undefined;
-    if (psd?.apiKeyHealth) {
-      updateData.providerSpecificData = {
-        ...psd,
-        apiKeyHealth: {},
-      };
-    }
+    updateData.providerSpecificData = {
+      ...(psd || {}),
+      apiKeyHealth: {},
+    };
 
     try {
       removeConnectionHealth(connectionId);
